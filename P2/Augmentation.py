@@ -11,15 +11,18 @@ final_fig = []
 def is_valid_image_cv2(filepath):
     if not filepath.lower().endswith(('.jpg', '.jpeg', '.png')):
         return False
-    img = cv2.imread(filepath)
-    return img is not None
+    try:
+        img = cv2.imread(filepath)
+        return img is not None
+    except Exception:
+        return False
 
 def create_augmented_parent_dir(filepath):
     if not os.path.exists("./augmented_directory"):
         os.mkdir("./augmented_directory")
     directory = os.path.dirname(filepath)
     parts = filepath.split(os.sep)
-    if parts[0] == "images":
+    if parts[0] == "images" or parts[0] == "augmented_directory":
         relative_parts = parts[1:]
     else:
         relative_parts = parts
@@ -62,12 +65,11 @@ def handle_file(filepath):
             final_fig.append(ag_img)
         filename = os.path.basename(filepath)
         for key, value in ag_img.items():
-            if not key == "Original":
-                ag_filename = append_ag_type(filename, key)
-                brg_img = cv2.cvtColor(value, cv2.COLOR_RGB2BGR)
-                output_path = os.path.join(ag_dir, ag_filename)
-                if not os.path.exists(output_path):
-                    cv2.imwrite(output_path, brg_img)
+            ag_filename = append_ag_type(filename, key)
+            brg_img = cv2.cvtColor(value, cv2.COLOR_RGB2BGR)
+            output_path = os.path.join(ag_dir, ag_filename)
+            if not os.path.exists(output_path):
+                cv2.imwrite(output_path, brg_img)
 
 def handle_dataset(setpath):
     for entry in os.listdir(setpath):
@@ -100,7 +102,7 @@ def create_final_figure(images_to_display):
 def main():
     try:
         if len(sys.argv) != 2:
-            raise TypeError("Usage: python Distribution.py <arg1>: arg1 must be the img to transform or the directory")
+            raise TypeError("Usage: python Augmentation.py <arg1>: arg1 must be the img to transform or the directory")
         path = sys.argv[1]
         if not os.path.exists(path):
             raise TypeError("Path does not exist")
