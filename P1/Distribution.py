@@ -3,6 +3,14 @@ import sys
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import cv2
+
+def is_valid_image_cv2(filepath):
+    if not filepath.lower().endswith(('.jpg', '.jpeg', '.png')):
+        return False
+    
+    img = cv2.imread(filepath)
+    return img is not None
 
 def main():
     try:
@@ -14,7 +22,7 @@ def main():
             full_path = os.path.join(path, entry)
             if os.path.isdir(full_path):
                 files = [x for x in os.listdir(full_path)
-                         if x.lower().endswith((('.jpg', '.jpeg', '.png')))]
+                         if is_valid_image_cv2(full_path)]
                 folders[entry] = len(files)
         plt.figure(figsize=(12, 5))
         plt.subplot(1, 2, 1)
