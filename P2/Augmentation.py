@@ -6,7 +6,35 @@ import matplotlib.pyplot as plt
 import albumentations as A
 import cv2
 
+#
+# -- show
+# -- balance
+# -- dir
+# -- file
+# 
+
 final_fig = []
+
+def create_final_figure(images_to_display):
+    if not images_to_display:
+        return
+
+    aug_names = list(images_to_display[0].keys())
+    num_rows = len(images_to_display)
+    num_cols = len(aug_names)
+
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(num_cols * 3, num_rows * 3), squeeze=False)
+
+    for row_idx, image_dict in enumerate(images_to_display):
+        for col_idx, aug_name in enumerate(aug_names):
+            ax = axes[row_idx, col_idx]
+            ax.imshow(image_dict[aug_name])
+            ax.axis('off')
+            if row_idx == 0:
+                ax.set_title(aug_name)
+    
+    plt.tight_layout()
+    plt.show()
 
 def is_valid_image_cv2(filepath):
     if not filepath.lower().endswith(('.jpg', '.jpeg', '.png')):
@@ -77,27 +105,6 @@ def handle_dataset(setpath):
         if os.path.isdir(full_path):
             for img in os.listdir(full_path):
                 handle_file(os.path.join(full_path, img))
-
-def create_final_figure(images_to_display):
-    if not images_to_display:
-        return
-
-    aug_names = list(images_to_display[0].keys())
-    num_rows = len(images_to_display)
-    num_cols = len(aug_names)
-
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(num_cols * 3, num_rows * 3), squeeze=False)
-
-    for row_idx, image_dict in enumerate(images_to_display):
-        for col_idx, aug_name in enumerate(aug_names):
-            ax = axes[row_idx, col_idx]
-            ax.imshow(image_dict[aug_name])
-            ax.axis('off')
-            if row_idx == 0:
-                ax.set_title(aug_name)
-    
-    plt.tight_layout()
-    plt.show()
     
 def main():
     try:

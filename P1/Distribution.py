@@ -1,9 +1,8 @@
 import os
 import sys
-import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 import cv2
+
 
 def is_valid_image_cv2(filepath):
     try:
@@ -12,14 +11,16 @@ def is_valid_image_cv2(filepath):
     except Exception:
         return False
 
+
 def main():
     try:
         if len(sys.argv) != 2:
-            raise TypeError("Usage: python Distribution.py <arg1>: arg1 must be the folder path")
+            print("Usage: python script.py <path>")
+            sys.exit(1)
         path = sys.argv[1]
-        
+
         if not os.path.isdir(path):
-            raise TypeError(f"Error: The provided path is not a directory: {path}")
+            raise TypeError(f"Error: Path is not a directory: {path}")
 
         folders = {}
         for entry in os.listdir(path):
@@ -31,9 +32,9 @@ def main():
                 folders[folder_name] = len(files)
 
         if not folders or sum(folders.values()) == 0:
-            print("\nWarning: No valid images were found in any subdirectories. Nothing to plot.")
+            print("\nWarning: No valid images found. Nothing to plot.")
             return
-        
+
         plt.figure(figsize=(12, 5))
         plt.subplot(1, 2, 1)
         plt.pie(folders.values(), labels=folders.keys(), autopct='%1.1f%%')
