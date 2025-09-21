@@ -10,15 +10,15 @@ import traceback
 
 
 def show_image_figure(images_to_display):
-    if not images_to_display or len(images_to_display) != 8:
-        raise ValueError("Final Fig must contain only 3 image.")
+    if not images_to_display or len(images_to_display) != 6:
+        raise ValueError("Final Fig must contain only 6 image.")
     
-    fig, axes = plt.subplots(4, 2, figsize=(12, 12))
+    fig, axes = plt.subplots(3, 2, figsize=(12, 12))
     for idx, tname in enumerate(images_to_display):
         row = idx // 2
         col = idx % 2
         ax = axes[row, col]
-        ax.imshow(images_to_display[tname])
+        ax.imshow(images_to_display[tname], cmap='gray')
         ax.axis('off')
         ax.set_title(tname)
     
@@ -40,13 +40,11 @@ def original(image, tname):
     
     
 def gaussian_blur(image, tname):
-    final_fig[tname] = image
-    pass
-
-
-def median_blur(image, tname):
-    final_fig[tname] = image
-    pass
+    gray_img = pcv.rgb2gray(rgb_img=image)
+    threshold_dark = pcv.threshold.otsu(gray_img=gray_img, object_type='dark')
+    blurred_img = pcv.gaussian_blur(img=threshold_dark, ksize=(5, 5), sigma_x=0, sigma_y=None)
+    
+    final_fig[tname] = blurred_img
 
 
 def mask(image, tname):
@@ -81,8 +79,6 @@ tfonctions = {
     "--roi-objects": roi_objects,
     "--analyse-object": analyse_obj,
     "--pseudolandmarks": pseudolandmarks,
-    "--median-blur": median_blur,
-    "--color-histogram": color_histogram,
 }
 
 
