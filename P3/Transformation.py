@@ -7,11 +7,13 @@ import argparse
 import shutil
 from plantcv import plantcv as pcv
 import traceback
+import numpy as np
 
 
 def show_image_figure(images_to_display):
-    if not images_to_display or len(images_to_display) != 6:
-        raise ValueError("Final Fig must contain only 6 image.")
+    size = len(images_to_display)
+    if not images_to_display or size != 6:
+        raise ValueError(f"Final Fig must contain only 6 image, actually {size}.")
     
     fig, axes = plt.subplots(3, 2, figsize=(12, 12))
     for idx, tname in enumerate(images_to_display):
@@ -40,12 +42,18 @@ def original(image, tname):
     
     
 def gaussian_blur(image, tname):
-    gray_img = pcv.rgb2gray(rgb_img=image)
-    threshold_dark = pcv.threshold.otsu(gray_img=gray_img, object_type='dark')
-    blurred_img = pcv.gaussian_blur(img=threshold_dark, ksize=(5, 5), sigma_x=0, sigma_y=None)
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    lower_green = (7, 25, 25)
+    upper_green = (106, 255, 255)
     
+    mask, _ = pcv.threshold.custom_range(img=hsv_image, 
+                                                lower_thresh=lower_green, 
+                                                upper_thresh=upper_green, 
+                                                channel='HSV')
+    
+    blurred_img = pcv.gaussian_blur(img=mask, ksize=(3, 3), sigma_x=0, sigma_y=None)
     final_fig[tname] = blurred_img
-
+    
 
 def mask(image, tname):
     final_fig[tname] = image
@@ -179,8 +187,9 @@ def main():
         if osp.isfile(args.path):
             if is_valid_image_cv2(args.path):
                 image = cv2.imread(args.path)
+                image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 for tname, func in tfonctions.items():
-                    func(image, tname[2:])
+                    func(image_rgb, tname[2:])
                 show_image_figure(final_fig)
         else:
             if not osp.exists(args.source):
