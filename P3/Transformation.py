@@ -34,50 +34,78 @@ def show_image_figure(images_to_display):
 
 final_fig = {}
 
+def tresh_bin_mask(image, lower_thresh, upper_thresh):
+    blurred_bgr = cv2.GaussianBlur(image, (5,5), 0)
+    hsv_image = cv2.cvtColor(blurred_bgr, cv2.COLOR_BGR2HSV)
+    binary_mask = cv2.inRange(hsv_image, np.array(lower_thresh), np.array(upper_thresh))
+    return binary_mask
 
-def original(image, tname):
-    final_fig[tname] = image
+def draw_roi_disease(image):
+    disease_mask = tresh_bin_mask(image, [10, 40, 130], [25, 255, 255])
+    contours, _ = cv2.findContours(disease_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    if not contours:
+        print("Aucun symptôme de maladie détecté.")
+        return image
+    else:
+        cv2.drawContours(image, contours, -1, (0, 0, 255), -1)
+        return image
+
+
+def original(image):
+    return image
+
+
+def gaussian_blur(image):
+    return tresh_bin_mask(image, [30, 25, 25], [90, 255, 255])
+
+
+def mask(image):
+    bin_mask = get_transformation(image, "--gaussian-blur")
+    masked_image = pcv.apply_mask(img=image, mask=bin_mask, mask_color='white')
+    return masked_image
+
+
+def roi_objects(image):
+    green_mask = get_transformation(image, "--gaussian-blur")
+    contours, _ = cv2.findContours(green_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    if not contours:
+        return image
+    else:
+        all_points = np.vstack(contours)
+        x, y, w, h = cv2.boundingRect(all_points)
+        image_with_drawing = np.copy(image)
+        cv2.drawContours(image_with_drawing, contours, -1, (0, 255, 0), -1)
+        image_with_drawing = draw_roi_disease(image_with_drawing)
+        cv2.rectangle(image_with_drawing, (x, y), (x+w, y+h), (0, 0, 255), 3)
+        return image_with_drawing
+
+
+def analyse_obj(image):
+    return image
+
+
+def pseudolandmarks(image):
+    # hsv_image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    # lower_green = (10, 25, 25)
+    # upper_green = (110, 255, 255)
     
-    
-    
-    
-def gaussian_blur(image, tname):
-    hsv_image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-    lower_green = (7, 25, 25)
-    upper_green = (106, 255, 255)
-    
-    mask, _ = pcv.threshold.custom_range(img=hsv_image, 
-                                                lower_thresh=lower_green, 
-                                                upper_thresh=upper_green, 
-                                                channel='HSV')
-    
-    blurred_img = pcv.gaussian_blur(img=mask, ksize=(3, 3), sigma_x=0, sigma_y=None)
-    final_fig[tname] = blurred_img
-    
+    # mask, _ = pcv.threshold.custom_range(img=hsv_image, 
+    #                                             lower_thresh=lower_green, 
+    #                                             upper_thresh=upper_green, 
+    #                                             channel='HSV')
+    # rois = pcv.roi.auto_grid(mask=mask, nrows=3, ncols=6, radius=20, img=image)
 
-def mask(image, tname):
-    final_fig[tname] = image
-    pass
+    # lbl_mask, n_lbls = pcv.create_labels(mask=mask, rois=rois)
+
+    # # Analyze the shape of each plant 
+    # shape_img = pcv.analyze.size(img=image.copy(), labeled_mask=lbl_mask, n_labels=n_lbls, label="plant")
+
+    # final_fig[tname] = shape_img
+    return image
 
 
-def analyse_obj(image, tname):
-    final_fig[tname] = image
-    pass
-
-
-def roi_objects(image, tname):
-    final_fig[tname] = image
-    pass
-
-
-def pseudolandmarks(image, tname):
-    final_fig[tname] = image
-    pass
-
-
-def color_histogram(image, tname):
-    final_fig[tname] = image
-    pass
+def color_histogram(image):
+    return image
 
 
 tfonctions = {
@@ -88,6 +116,18 @@ tfonctions = {
     "--analyse-object": analyse_obj,
     "--pseudolandmarks": pseudolandmarks,
 }
+
+def get_transformation(image, tname):
+    if tname in final_fig:
+        return final_fig[tname]
+    
+    if tname in tfonctions:
+        function_to_call = tfonctions[tname]
+        result = function_to_call(image)
+        return result
+    else:
+        return image
+
 
 
 # Transformation
@@ -129,29 +169,8 @@ def replace_root_dir(dirname, output_root):
     new_path = osp.join(output_root, *parts)
     return new_path
 
-
 # Utils
 #################################################################
-
-
-def handle_file(filepath, num_of_Aug=6):
-    pass
-    # if is_valid_image_cv2(filepath):
-    #     ag_imgs = transformation(filepath, num_of_Aug)
-    #     if not ag_imgs:
-    #         raise ValueError("Error: imgs not augmented.")
-
-    #     if len(final_fig) <= 6:
-    #         final_fig.append(ag_imgs)
-
-    #     output_dir = osp.dirname(filepath)
-    #     original_filename = osp.basename(filepath)
-    #     for key, value in ag_imgs.items():
-    #         new_file = get_new_filepath(output_dir, original_filename, key)
-    #         brg_img = cv2.cvtColor(value, cv2.COLOR_RGB2BGR)
-    #         cv2.imwrite(new_file, brg_img)
-    #     return True
-    # return False
 
 
 def main():
@@ -189,7 +208,8 @@ def main():
                 image = cv2.imread(args.path)
                 image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 for tname, func in tfonctions.items():
-                    func(image_rgb, tname[2:])
+                    timg = func(image_rgb)
+                    final_fig[tname[2::]] = timg
                 show_image_figure(final_fig)
         else:
             if not osp.exists(args.source):
