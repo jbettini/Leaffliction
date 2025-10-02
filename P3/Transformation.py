@@ -1,7 +1,6 @@
 import os
 import os.path as osp
 import matplotlib.pyplot as plt
-import albumentations as A
 import cv2
 import argparse
 import shutil
@@ -40,68 +39,93 @@ def tresh_bin_mask(image, lower_thresh, upper_thresh):
     binary_mask = cv2.inRange(hsv_image, np.array(lower_thresh), np.array(upper_thresh))
     return binary_mask
 
+def _create_leaf_mask(image):
+    lower_leaf = np.array([25, 0, 0])
+    upper_leaf = np.array([95, 255, 255])
+    mask = tresh_bin_mask(image, lower_leaf, upper_leaf)
+    
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    
+    return mask
+
+def _create_disease_mask(image):
+    lower_disease = np.array([10, 60, 50])
+    upper_disease = np.array([30, 255, 255])
+    
+    disease_mask = tresh_bin_mask(image, lower_disease, upper_disease)
+    
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    disease_mask = cv2.morphologyEx(disease_mask, cv2.MORPH_CLOSE, kernel)
+    disease_mask = cv2.morphologyEx(disease_mask, cv2.MORPH_OPEN, kernel)
+    
+    return disease_mask
+
 def draw_roi_disease(image):
-    disease_mask = tresh_bin_mask(image, [10, 40, 130], [25, 255, 255])
+# Apple Scab
+# lower_thresh = np.array([35, 50, 50])
+# upper_thresh = np.array([100, 255, 255])
+# Apple Rot
+# lower_thresh = np.array([0, 20, 50])
+# upper_thresh = np.array([20, 255, 255])
+# Apple Rust + Rot
+# lower_thresh = np.array([0, 50, 50])
+# upper_thresh = np.array([25, 255, 255])
+    disease_mask = _create_disease_mask(image.copy())
     contours, _ = cv2.findContours(disease_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    if not contours:
-        print("Aucun symptôme de maladie détecté.")
-        return image
-    else:
+    if contours:
         cv2.drawContours(image, contours, -1, (0, 0, 255), -1)
-        return image
+    return image
 
 
 def original(image):
     return image
 
 
-def gaussian_blur(image):
-    return tresh_bin_mask(image, [30, 25, 25], [90, 255, 255])
-
-
 def mask(image):
-    bin_mask = get_transformation(image, "--gaussian-blur")
+    bin_mask = _create_leaf_mask(image)
     masked_image = pcv.apply_mask(img=image, mask=bin_mask, mask_color='white')
     return masked_image
 
 
 def roi_objects(image):
-    green_mask = get_transformation(image, "--gaussian-blur")
+    green_mask = _create_leaf_mask(image)
     contours, _ = cv2.findContours(green_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     if not contours:
         return image
     else:
-        all_points = np.vstack(contours)
-        x, y, w, h = cv2.boundingRect(all_points)
         image_with_drawing = np.copy(image)
-        cv2.drawContours(image_with_drawing, contours, -1, (0, 255, 0), -1)
         image_with_drawing = draw_roi_disease(image_with_drawing)
-        cv2.rectangle(image_with_drawing, (x, y), (x+w, y+h), (0, 0, 255), 3)
+        cv2.drawContours(image_with_drawing, contours, -1, (0, 255, 0), 2)
+        x, y, w, h = cv2.boundingRect(np.vstack(contours))
+        cv2.rectangle(image_with_drawing, (x, y), (x+w, y+h), (255, 0, 0), 3)
         return image_with_drawing
-
-
-def analyse_obj(image):
-    return image
-
-
-def pseudolandmarks(image):
-    # hsv_image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-    # lower_green = (10, 25, 25)
-    # upper_green = (110, 255, 255)
     
-    # mask, _ = pcv.threshold.custom_range(img=hsv_image, 
-    #                                             lower_thresh=lower_green, 
-    #                                             upper_thresh=upper_green, 
-    #                                             channel='HSV')
-    # rois = pcv.roi.auto_grid(mask=mask, nrows=3, ncols=6, radius=20, img=image)
 
-    # lbl_mask, n_lbls = pcv.create_labels(mask=mask, rois=rois)
-
-    # # Analyze the shape of each plant 
-    # shape_img = pcv.analyze.size(img=image.copy(), labeled_mask=lbl_mask, n_labels=n_lbls, label="plant")
-
-    # final_fig[tname] = shape_img
+def draw_landmarks_circles(image, points, color):
+    for point in points:
+        cv2.circle(image, (int(point[0]), int(point[1])), 3, color, -1)
+        
+def pseudolandmarks(image):
+    pcv.params.sample_label = "plant"
+    
+    mask = _create_leaf_mask(image)
+    
+    left, right, center_h = pcv.homology.y_axis_pseudolandmarks(img=image, mask=mask)
+    left_landmarks = pcv.outputs.observations['plant']['left_lmk']['value']
+    right_landmarks = pcv.outputs.observations['plant']['right_lmk']['value']
+    center_landmarks = pcv.outputs.observations['plant']['center_h_lmk']['value']
+    draw_landmarks_circles(image, left_landmarks, (0, 0, 255))
+    draw_landmarks_circles(image, right_landmarks, (0, 255, 0))
+    draw_landmarks_circles(image, center_landmarks, (255, 0, 0))
+    
     return image
+    
+def analyse_obj(image):
+    return (image)
+    
+
 
 
 def color_histogram(image):
@@ -110,24 +134,12 @@ def color_histogram(image):
 
 tfonctions = {
     "--original": original,
-    "--gaussian-blur": gaussian_blur,
+    "--gaussian-blur": _create_leaf_mask,
     "--mask": mask,
     "--roi-objects": roi_objects,
     "--analyse-object": analyse_obj,
     "--pseudolandmarks": pseudolandmarks,
 }
-
-def get_transformation(image, tname):
-    if tname in final_fig:
-        return final_fig[tname]
-    
-    if tname in tfonctions:
-        function_to_call = tfonctions[tname]
-        result = function_to_call(image)
-        return result
-    else:
-        return image
-
 
 
 # Transformation
@@ -206,10 +218,10 @@ def main():
         if osp.isfile(args.path):
             if is_valid_image_cv2(args.path):
                 image = cv2.imread(args.path)
-                image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                # image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 for tname, func in tfonctions.items():
-                    timg = func(image_rgb)
-                    final_fig[tname[2::]] = timg
+                    timg = func(image.copy())
+                    final_fig[tname[2::]] = cv2.cvtColor(timg, cv2.COLOR_BGR2RGB)
                 show_image_figure(final_fig)
         else:
             if not osp.exists(args.source):
