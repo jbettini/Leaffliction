@@ -212,8 +212,6 @@ def main():
             if args.balance:
                 print("Balancing directory...")
                 balance_dir(args.output)
-        #     if args.balance:
-        #         print("Balancing directory...")
             else:
                 processed_file = 0
                 print("Augmenting directory without balencing...")
