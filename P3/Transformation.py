@@ -7,6 +7,7 @@ import shutil
 from plantcv import plantcv as pcv
 import traceback
 import numpy as np
+from skimage import color
 
 
 def show_image_figure(images_to_display):
@@ -76,7 +77,6 @@ def roi_objects(image):
         return image
     else:
         image_with_drawing = np.copy(image)
-        # image_with_drawing = draw_roi_disease(image_with_drawing)
         cv2.drawContours(image_with_drawing, contours, -1, (0, 255, 0), 2)
         x, y, w, h = cv2.boundingRect(np.vstack(contours))
         cv2.rectangle(image_with_drawing, (x, y), (x+w, y+h), (255, 0, 0), 3)
@@ -103,18 +103,66 @@ def pseudolandmarks(image):
 
 def analyse_obj(image):
     mask = _create_leaf_mask(image)
-    rois = pcv.roi.auto_grid(mask=mask, nrows=2, ncols=2, radius=10, img=image)
-    lbl_mask, n_lbls = pcv.create_labels(mask=mask, rois=rois)
-    shape_img = pcv.analyze.size(
-        img=image.copy(),
-        labeled_mask=lbl_mask,
-        n_labels=n_lbls,
-        label="plant"
+
+    contours, _ = cv2.findContours(
+        mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
     )
-    return shape_img
+    if contours:
+        largest_contour = max(contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(largest_contour)
+        roi = pcv.roi.rectangle(img=image, x=x, y=y, h=h, w=w)
+
+        lbl_mask, n_lbls = pcv.create_labels(mask=mask, rois=roi)
+        shape_img = pcv.analyze.size(
+            img=image.copy(),
+            labeled_mask=lbl_mask,
+            n_labels=n_lbls,
+            label="plant"
+        )
+        return shape_img
+
+    return image
 
 
 def color_histogram(image):
+    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    lab_image = color.rgb2lab(rgb_image)
+    hsv_image = color.rgb2hsv(rgb_image)
+
+    total_pixels = image.shape[0] * image.shape[1]
+
+    channels = [
+        ('Red', rgb_image[:, :, 0].flatten(), 'red'),
+        ('Green', rgb_image[:, :, 1].flatten(), 'green'),
+        ('Blue', rgb_image[:, :, 2].flatten(), 'blue'),
+        ('Lightness', lab_image[:, :, 0].flatten(), 'gray'),
+        ('Green-Magenta', lab_image[:, :, 1].flatten(), 'magenta'),
+        ('Blue-Yellow', lab_image[:, :, 2].flatten(), 'yellow'),
+        ('Hue', hsv_image[:, :, 0].flatten() * 360, 'orange'),
+        ('Saturation', hsv_image[:, :, 1].flatten() * 100, 'purple'),
+        ('Value', hsv_image[:, :, 2].flatten() * 100, 'brown')
+    ]
+
+    plt.figure(figsize=(14, 8))
+
+    for name, values, color_name in channels:
+        weights = np.ones(len(values)) / total_pixels * 100
+        plt.hist(
+            values,
+            bins=50,
+            alpha=0.6,
+            label=name,
+            color=color_name,
+            weights=weights
+        )
+
+    plt.xlabel('Intensité des Pixels')
+    plt.ylabel('Proportion de Pixels (%)')
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+
     return image
 
 
@@ -123,7 +171,7 @@ tfonctions = {
     "--gaussian-blur": _create_leaf_mask,
     "--mask": mask,
     "--roi-objects": roi_objects,
-    # "--analyse-object": analyse_obj,
+    "--analyse-object": analyse_obj,
     "--pseudolandmarks": pseudolandmarks,
 }
 
@@ -236,6 +284,8 @@ def main():
             if osp.isfile(args.file):
                 if is_valid_image_cv2(args.file):
                     image = cv2.imread(args.file)
+                    color_histogram(image)
+                    exit(0)
                     for tname, func in tfonctions.items():
                         timg = func(image.copy())
                         final_fig[tname[2::]] = cv2.cvtColor(
