@@ -6,9 +6,11 @@ import cv2
 import argparse
 import shutil
 import random
+from pathlib import Path
 
 
 final_fig = []
+thresh = 600
 
 
 def create_final_figure(images_to_display):
@@ -126,15 +128,24 @@ def handle_file(filepath, num_of_Aug=6):
 
 
 def balance_dir(dirpath):
-    folders = {}
     max_files = 0
+    sets_data = {}
     for root, dirs, files in os.walk(dirpath):
         valid_images = [f for f in files
                         if is_valid_image_cv2(osp.join(root, f))]
         if valid_images and not dirs:
-            folders[root] = len(valid_images)
+            set_name = Path(root).parent.name
+            if set_name not in sets_data:
+                sets_data[set_name] = {'max_files': 0, 'folders': []}
             max_files = max(max_files, len(valid_images))
+            current_max = sets_data[set_name]['max_files']
+            sets_data[set_name]['max_files'] = max(current_max, len(valid_images))
+            sets_data[set_name]['folders'].append(root)
 
+            
+    print(sets_data)
+    exit(0)
+    pass
     if not folders or sum(folders.values()) == 0:
         print("\nError: No dataset to balance.")
         return

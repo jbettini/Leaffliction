@@ -1,0 +1,24 @@
+[x] Handle all tranformation into folder
+[x] Handle tranformation by tranformation
+[x] Fix flake8
+[x] handle histogram
+
+[ ] Handle small dataset augmentation with a tresh min of 500 img
+
+[ ] JSON for supervised model
+    [ ] Convert tranformation data on csv data for input dataset
+    [ ] Create output dataset using input dataset and set the solution
+
+[ ] Prepare correction 
+    [ ] Create VM
+    [ ] Setup shasum for datsets and training DB
+
+
+Watch Video to learn what is CNN and Tensor Flow
+
+[ ] https://www.youtube.com/watch?v=aircAruvnKk
+[ ] https://www.tensorflow.org/tutorials/images/classification?hl=fr
+[ ] https://www.tensorflow.org/tutorials/images/transfer_learning?hl=fr
+[ ] Optional : https://cs231n.github.io/
+
+
