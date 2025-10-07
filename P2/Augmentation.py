@@ -128,7 +128,6 @@ def handle_file(filepath, num_of_Aug=6):
 
 
 def balance_dir(dirpath):
-    max_files = 0
     sets_data = {}
     for root, dirs, files in os.walk(dirpath):
         valid_images = [f for f in files
@@ -137,40 +136,38 @@ def balance_dir(dirpath):
             set_name = Path(root).parent.name
             if set_name not in sets_data:
                 sets_data[set_name] = {'max_files': 0, 'folders': []}
-            max_files = max(max_files, len(valid_images))
+            nimg = len(valid_images)
             current_max = sets_data[set_name]['max_files']
-            sets_data[set_name]['max_files'] = max(current_max, len(valid_images))
-            sets_data[set_name]['folders'].append(root)
+            sets_data[set_name]['max_files'] = max(current_max, nimg)
+            sets_data[set_name]['folders'].append((root, nimg))
 
-            
-    print(sets_data)
-    exit(0)
-    pass
-    if not folders or sum(folders.values()) == 0:
-        print("\nError: No dataset to balance.")
-        return
-
-    for subdir, count in folders.items():
-        if count >= max_files:
+    for set_name, data_map in sets_data.items():
+        max_aug = thresh
+        cur_max_files = data_map['max_files']
+        if cur_max_files == 0:
             continue
-        source_images = [f for f in os.listdir(subdir)
-                         if is_valid_image_cv2(osp.join(subdir, f))]
-        if not source_images:
-            continue
-        iter = 0
-        images_needed = max_files - count
-        num_of_iter = int(images_needed / 6)
-
-        while iter < num_of_iter:
-            image_to_augment = random.choice(source_images)
-            full_image_path = osp.join(subdir, image_to_augment)
-            handle_file(full_image_path)
-            iter += 1
-        remaining_img = images_needed % 6
-        if remaining_img:
-            image_to_augment = random.choice(source_images)
-            full_image_path = osp.join(subdir, image_to_augment)
-            handle_file(full_image_path, remaining_img)
+        elif cur_max_files > max_aug:
+            max_aug = cur_max_files
+        for subset_path, num_of_file in data_map['folders']:
+            if num_of_file >= max_aug:
+                continue
+            source_images = [f for f in os.listdir(subset_path)
+                             if is_valid_image_cv2(osp.join(subset_path, f))]
+            if not source_images:
+                continue
+            iter = 0
+            images_needed = max_aug - num_of_file
+            num_of_iter = images_needed // 6
+            while iter < num_of_iter:
+                image_to_augment = random.choice(source_images)
+                full_image_path = osp.join(subset_path, image_to_augment)
+                handle_file(full_image_path)
+                iter += 1
+            remaining_img = images_needed % 6
+            if remaining_img:
+                image_to_augment = random.choice(source_images)
+                full_image_path = osp.join(subset_path, image_to_augment)
+                handle_file(full_image_path, remaining_img)
 
 
 def main():
