@@ -213,3 +213,4 @@ images
 *.PNG
 *.JPEG
 *.jpeg
+*.keras
