@@ -1,13 +1,9 @@
 import os
 import os.path as osp
-import matplotlib.pyplot as plt
-import numpy as np
-import PIL
 import tensorflow as tf
 import argparse
 
 
-from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
 
@@ -31,7 +27,7 @@ def main():
         if not osp.exists(data_dir):
             parser.error(f"Dataset path does not exist: {data_dir}.")
         elif not osp.isdir(data_dir):
-            parser.error(f"Dataset must be a folder.")
+            parser.error("Dataset must be a folder.")
 
         # Split init datasets
         train_ds = tf.keras.utils.image_dataset_from_directory(
@@ -54,7 +50,8 @@ def main():
 
         AUTOTUNE = tf.data.AUTOTUNE
 
-        train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
+        train_ds = train_ds.cache().shuffle(1000).prefetch(
+                                                        buffer_size=AUTOTUNE)
         val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
         num_classes = len(class_names)
@@ -71,22 +68,23 @@ def main():
             layers.Dense(128, activation='relu'),
             layers.Dense(num_classes)
         ])
-        
-        model.compile(optimizer='adam',
-              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-              metrics=['accuracy'])
-        
-        epochs=5
-        
+
+        model.compile(
+                        optimizer='adam',
+                        loss=tf.keras.losses.SparseCategoricalCrossentropy(
+                            from_logits=True),
+                        metrics=['accuracy']
+                    )
+
+        epochs = 5
+
         _ = model.fit(
             train_ds,
             validation_data=val_ds,
             epochs=epochs
         )
-        
+
         model.save('leaffliction_model.keras')
-
-
 
     except TypeError as e:
         print(f"TypeError: {str(e)}")
