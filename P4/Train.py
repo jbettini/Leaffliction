@@ -14,6 +14,30 @@ img_height = 255
 img_width = 255
 
 
+subsets = [
+    'Apple_Black_rot', 'Apple_healthy', 'Apple_rust', 'Apple_scab',
+    'Grape_Black_rot', 'Grape_Esca', 'Grape_healthy', 'Grape_spot'
+]
+
+
+def save_dataset_as_images(dataset, class_names, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+
+    for name in class_names:
+        os.makedirs(os.path.join(output_dir, name), exist_ok=True)
+
+    file_counter = 0
+    for image_batch, label_batch in dataset:
+        for i in range(len(image_batch)):
+            image = image_batch[i]
+            label_index = label_batch[i]
+            class_name = class_names[label_index]
+            save_path = os.path.join(output_dir, class_name, f"image_{file_counter}.png")
+            tf.keras.utils.save_img(save_path, image)
+            file_counter += 1
+
+
+
 def main():
     try:
         parser = argparse.ArgumentParser(
@@ -45,6 +69,9 @@ def main():
             seed=123,
             image_size=(img_height, img_width),
             batch_size=batch_size)
+        print("Saving Datasets ...")
+        save_dataset_as_images(train_ds, subsets, "training_dataset")
+        save_dataset_as_images(val_ds, subsets, "validation_dataset")
 
         class_names = train_ds.class_names
 
@@ -64,10 +91,12 @@ def main():
             layers.MaxPooling2D(),
             layers.Conv2D(64, 3, padding='same', activation='relu'),
             layers.MaxPooling2D(),
+            layers.Dropout(0.2),
             layers.Flatten(),
             layers.Dense(128, activation='relu'),
             layers.Dense(num_classes)
         ])
+
 
         model.compile(
                         optimizer='adam',
