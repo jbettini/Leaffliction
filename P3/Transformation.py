@@ -284,14 +284,13 @@ def main():
             if osp.isfile(args.file):
                 if is_valid_image_cv2(args.file):
                     image = cv2.imread(args.file)
-                    color_histogram(image)
-                    exit(0)
                     for tname, func in tfonctions.items():
                         timg = func(image.copy())
                         final_fig[tname[2::]] = cv2.cvtColor(
                             timg,
                             cv2.COLOR_BGR2RGB
                         )
+                    color_histogram(image)
                     show_image_figure(final_fig)
             else:
                 parser.error("must be a correct file")
