@@ -86,15 +86,19 @@ def augmentation(filepath, num_of_Aug):
         ]),
         # Rotate image between -90 and 90 degrees
         'Rotate': A.SafeRotate(limit=90, p=1.0),
-        'HighContrast': A.CLAHE(clip_limit=4.0, tile_grid_size=(8, 8), p=1.0),
+        'HighContrast': A.CLAHE(clip_limit=(1.0, 3.0), p=1.0),
         'Brightness': A.RandomBrightnessContrast(
             brightness_limit=(0.3, 0.3), p=1.0
         ),
-        # 50% of chance to apply different blur
-        'Blur': A.OneOf([
-            A.GaussianBlur(blur_limit=(11, 17), p=1.0),
-            A.MotionBlur(blur_limit=(11, 17), p=1.0),
-        ], p=1.0),
+
+        # Erase some part of the image to hide some parts of the image
+        'RandomErasing': A.CoarseDropout(
+            num_holes_range=(1, 5),
+            hole_height_range=(40, 80),
+            hole_width_range=(40, 80),
+            fill=0,
+            p=1.0
+        ),
         # Divide Img in 10*10 grid and apply a Distortion
         'Distortion': A.GridDistortion(num_steps=10, distort_limit=0.4, p=1.0),
     }
