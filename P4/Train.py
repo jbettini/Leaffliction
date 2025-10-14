@@ -32,10 +32,13 @@ def save_dataset_as_images(dataset, class_names, output_dir):
             image = image_batch[i]
             label_index = label_batch[i]
             class_name = class_names[label_index]
-            save_path = os.path.join(output_dir, class_name, f"image_{file_counter}.png")
+            save_path = os.path.join(
+                                output_dir,
+                                class_name,
+                                f"image_{file_counter}.png"
+                        )
             tf.keras.utils.save_img(save_path, image)
             file_counter += 1
-
 
 
 def main():
@@ -96,7 +99,6 @@ def main():
             layers.Dense(128, activation='relu'),
             layers.Dense(num_classes)
         ])
-
 
         model.compile(
                         optimizer='adam',
