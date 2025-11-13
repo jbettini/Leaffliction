@@ -107,7 +107,7 @@ def main():
                         metrics=['accuracy']
                     )
 
-        epochs = 5
+        epochs = 10
 
         _ = model.fit(
             train_ds,
